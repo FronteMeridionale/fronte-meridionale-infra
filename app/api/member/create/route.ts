@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
       total_eur_valid: 0,
       status: calculateMemberStatus(0),
       elector_since: null,
-      can_vote_from: null,
       first_valid_tx_hash: null,
       last_tx_hash: null,
     };

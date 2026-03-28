@@ -8,9 +8,9 @@ export default function Home() {
           Fronte Meridionale
         </h1>
         <p className="text-xl leading-relaxed text-stone-700">
-          Un movimento civico per il rinascimento del Sud. Entra a far parte
-          della comunità, sostieni il progetto e conquista il tuo diritto di
-          voto.
+          Un movimento civico per il rinascimento del Sud. Entra nel Fronte
+          Meridionale, registra la tua partecipazione e ottieni il tuo codice
+          membro nel registro.
         </p>
         <div className="pt-4">
           <ParticipationButton />
