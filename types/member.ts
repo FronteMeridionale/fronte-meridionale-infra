@@ -7,7 +7,6 @@ export interface Member {
   total_eur_valid: number;
   status: MemberStatus;
   elector_since: string | null;
-  can_vote_from: string | null;
   first_valid_tx_hash: string | null;
   last_tx_hash: string | null;
 }
