@@ -1,0 +1,1 @@
+// telegram-validation.ts content goes here

@@ -1,0 +1,1 @@
+// participate/route.ts content goes here
