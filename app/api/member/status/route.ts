@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findByMemberCode, findByTelegramId } from "@/lib/member/store";
+import { findByMemberCode, findByTelegramId } from "@/app/lib/member-repository";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
