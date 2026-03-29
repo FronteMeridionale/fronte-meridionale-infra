@@ -1,19 +1,23 @@
 {
   "name": "fronte-meridionale-bot",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "main": "dist/bot.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "start": "node dist/bot.js",
-    "dev": "ts-node src/bot.ts"
+    "bot:start": "node dist/bot.js",
+    "dev": "ts-node src/bot.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "grammy": "^1.41.1"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5.0.0"
   }
 }
