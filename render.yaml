@@ -1,0 +1,42 @@
+# render.yaml — Render deployment for Fronte Meridionale
+# https://render.com/docs/infrastructure-as-code
+
+services:
+  # -------------------------------------------------------------------------
+  # Web Service — Next.js app + REST API
+  # -------------------------------------------------------------------------
+  - type: web
+    name: fronte-meridionale-app
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /var/data/members.db
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false           # Set manually in Render dashboard
+      - key: NEXT_PUBLIC_API_URL
+        sync: false           # e.g. https://fronte-meridionale-app.onrender.com
+    disk:
+      name: sqlite-data
+      mountPath: /var/data
+      sizeGB: 1
+
+  # -------------------------------------------------------------------------
+  # Background Worker — Telegram bot (polling mode)
+  # -------------------------------------------------------------------------
+  - type: worker
+    name: fronte-meridionale-bot
+    runtime: node
+    plan: starter
+    rootDir: telegram-bot
+    buildCommand: npm install && npm run build
+    startCommand: node dist/bot.js
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false           # Same token as the web service
+      - key: BACKEND_URL
+        sync: false           # URL of the web service, e.g. https://fronte-meridionale-app.onrender.com

@@ -1,0 +1,19 @@
+{
+  "name": "fronte-meridionale-bot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "dev": "ts-node src/bot.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "grammy": "^1.41.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

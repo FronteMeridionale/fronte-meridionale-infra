@@ -4,7 +4,7 @@ import {
   findByTelegramId,
   generateMemberCode,
   saveMember,
-} from "@/lib/member/store";
+} from "@/app/lib/member-repository";
 import { Member } from "@/types/member";
 
 export async function POST(request: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newMember: Member = {
-      member_code: generateMemberCode(),
+      member_code: generateMemberCode(telegram_user_id),
       telegram_user_id,
       wallet_address: null,
       total_eur_valid: 0,
