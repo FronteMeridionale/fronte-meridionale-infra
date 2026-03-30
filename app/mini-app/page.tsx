@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from "react";
 
+interface TelegramWebAppUser {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+}
+
 interface TelegramWebApp {
   initData: string;
+  initDataUnsafe?: {
+    user?: TelegramWebAppUser;
+  };
   ready: () => void;
   close: () => void;
   expand: () => void;
@@ -11,7 +22,9 @@ interface TelegramWebApp {
 
 declare global {
   interface Window {
-    Telegram?: { WebApp: TelegramWebApp };
+    Telegram?: {
+      WebApp: TelegramWebApp;
+    };
   }
 }
 
@@ -39,56 +52,64 @@ export default function MiniApp() {
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
+
     if (!tg) {
-      setError(
-        "Apri questa pagina dal bot Telegram per accedere alla Mini App."
-      );
+      setError("Apri questa pagina dal bot Telegram per accedere alla Mini App.");
       setLoading(false);
       return;
     }
 
     tg.ready();
     tg.expand();
-    setInitData(tg.initData);
 
-    const params = new URLSearchParams(tg.initData);
-    const userRaw = params.get("user");
-    if (!userRaw) {
-      setError("Dati utente non trovati. Riavvia il bot.");
+    const rawInitData = tg.initData ?? "";
+    setInitData(rawInitData);
+
+    const userId = tg.initDataUnsafe?.user?.id;
+
+    if (!userId) {
+      setError("Dati utente Telegram non trovati. Riapri la Mini App dal bot.");
       setLoading(false);
       return;
     }
 
-    let userId: string;
-    try {
-      userId = String((JSON.parse(userRaw) as { id: number }).id);
-    } catch {
-      setError("Dati utente non validi. Riavvia il bot.");
-      setLoading(false);
-      return;
-    }
+    const controller = new AbortController();
 
-    fetch(`/api/member/status?telegram_user_id=${userId}`)
-      .then((r) => r.json())
-      .then((data: Member) => {
+    fetch(`/api/member/status?telegram_user_id=${userId}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`);
+        }
+        return (await r.json()) as Member;
+      })
+      .then((data) => {
         setMember(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        console.error("[MiniApp] status error:", err);
         setError("Errore nel caricamento del profilo. Riprova.");
         setLoading(false);
       });
+
+    return () => controller.abort();
   }, []);
 
   async function handleParticipate() {
     if (!initData || participating) return;
+
     setParticipating(true);
     setError(null);
 
     try {
       const res = await fetch("/api/member/participate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ initData }),
       });
 
@@ -98,14 +119,23 @@ export default function MiniApp() {
       }
 
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        setError(body.error ?? "Errore nella richiesta.");
+        let message = "Errore nella richiesta.";
+
+        try {
+          const body = (await res.json()) as { error?: string };
+          message = body.error ?? message;
+        } catch {
+          // nessuna azione necessaria
+        }
+
+        setError(message);
         return;
       }
 
       const updated = (await res.json()) as Member;
       setMember(updated);
-    } catch {
+    } catch (err) {
+      console.error("[MiniApp] participate error:", err);
       setError("Errore di rete. Riprova.");
     } finally {
       setParticipating(false);
@@ -167,9 +197,7 @@ export default function MiniApp() {
           </div>
         )}
 
-        {error && (
-          <p className="text-center text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
         <button
           onClick={handleParticipate}
