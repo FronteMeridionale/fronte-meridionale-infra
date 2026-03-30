@@ -49,53 +49,57 @@ export default function MiniApp() {
   const [participating, setParticipating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
+  const [isTelegramContext, setIsTelegramContext] = useState(false);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
 
-    if (!tg) {
-      setError("Apri questa pagina dal bot Telegram per accedere alla Mini App.");
-      setLoading(false);
-      return;
+    if (tg) {
+      setIsTelegramContext(true);
+      tg.ready();
+      tg.expand();
+
+      const rawInitData = tg.initData ?? "";
+      setInitData(rawInitData);
+
+      const userId = tg.initDataUnsafe?.user?.id;
+
+      if (!userId) {
+        setError("Dati utente Telegram non trovati. Riapri la Mini App dal bot.");
+        setLoading(false);
+        return;
+      }
+
+      const controller = new AbortController();
+
+      fetch(`/api/member/status?telegram_user_id=${userId}`, {
+        signal: controller.signal,
+        cache: "no-store",
+      })
+        .then(async (r) => {
+          if (!r.ok) {
+            throw new Error(`HTTP ${r.status}`);
+          }
+          return (await r.json()) as Member;
+        })
+        .then((data) => {
+          setMember(data);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          console.error("[MiniApp] status error:", err);
+          setError("Errore nel caricamento del profilo. Riprova.");
+          setLoading(false);
+        });
+
+      return () => controller.abort();
     }
 
-    tg.ready();
-    tg.expand();
-
-    const rawInitData = tg.initData ?? "";
-    setInitData(rawInitData);
-
-    const userId = tg.initDataUnsafe?.user?.id;
-
-    if (!userId) {
-      setError("Dati utente Telegram non trovati. Riapri la Mini App dal bot.");
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    fetch(`/api/member/status?telegram_user_id=${userId}`, {
-      signal: controller.signal,
-      cache: "no-store",
-    })
-      .then(async (r) => {
-        if (!r.ok) {
-          throw new Error(`HTTP ${r.status}`);
-        }
-        return (await r.json()) as Member;
-      })
-      .then((data) => {
-        setMember(data);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        console.error("[MiniApp] status error:", err);
-        setError("Errore nel caricamento del profilo. Riprova.");
-        setLoading(false);
-      });
-
-    return () => controller.abort();
+    setIsTelegramContext(false);
+    setError(
+      "Questa pagina è stata aperta fuori dalla Mini App Telegram. Per il test completo aprila dal bot."
+    );
+    setLoading(false);
   }, []);
 
   async function handleParticipate() {
@@ -146,6 +150,22 @@ export default function MiniApp() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50">
         <p className="text-stone-500">Caricamento…</p>
+      </main>
+    );
+  }
+
+  if (!isTelegramContext) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-stone-50 px-6">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
+          <h1 className="mb-4 text-2xl font-bold text-green-800">
+            Fronte Meridionale
+          </h1>
+          <p className="text-sm text-red-600">{error}</p>
+          <p className="mt-4 text-sm text-gray-600">
+            Torna su Telegram e apri la Mini App dal bot ufficiale.
+          </p>
+        </div>
       </main>
     );
   }
@@ -201,7 +221,7 @@ export default function MiniApp() {
 
         <button
           onClick={handleParticipate}
-          disabled={participating}
+          disabled={participating || !initData}
           className="w-full rounded-full bg-green-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-50"
         >
           {participating ? "Elaborazione…" : "Conferma partecipazione (+5€)"}
