@@ -108,7 +108,9 @@ function statusLabel(status: string): string {
 // ---------------------------------------------------------------------------
 
 function miniAppKeyboard(): InlineKeyboard {
-  return new InlineKeyboard().webApp("🌐 Apri Mini App", WEB_APP_URL);
+  const keyboard = new InlineKeyboard();
+  keyboard.webApp("🌐 Apri la Mini App", WEB_APP_URL);
+  return keyboard;
 }
 
 function miniAppUrlKeyboard(): InlineKeyboard {
@@ -183,13 +185,8 @@ bot.command("status", async (ctx) => {
 bot.command("app", async (ctx) => {
   console.log(`${ctx.from?.id} → /app`);
 
-  const keyboard = new InlineKeyboard().webApp(
-    "🌐 Apri la Mini App",
-    WEB_APP_URL
-  );
-
   await ctx.reply("Apri la Mini App del Fronte Meridionale:", {
-    reply_markup: keyboard,
+    reply_markup: miniAppKeyboard(),
   });
 });
 
