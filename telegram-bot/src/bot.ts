@@ -111,6 +111,10 @@ function miniAppKeyboard(): InlineKeyboard {
   return new InlineKeyboard().webApp("🌐 Apri Mini App", WEB_APP_URL);
 }
 
+function miniAppUrlKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().url("🔗 Apri Mini App nel browser", WEB_APP_URL);
+}
+
 // ---------------------------------------------------------------------------
 // /start
 // ---------------------------------------------------------------------------
@@ -135,7 +139,7 @@ bot.command("start", async (ctx) => {
       `Il tuo codice membro è:\n` +
       `<code>${member.member_code}</code>\n\n` +
       `Stato attuale: ${statusLabel(member.status)}\n\n` +
-      `Apri la Mini App per confermare la tua partecipazione.`,
+      `Per continuare, apri la Mini App dal pulsante qui sotto.`,
     {
       parse_mode: "HTML",
       reply_markup: miniAppKeyboard(),
@@ -155,9 +159,7 @@ bot.command("status", async (ctx) => {
   const member = await getMemberStatus(userId);
 
   if (!member) {
-    await ctx.reply(
-      "⚠️ Profilo non trovato. Invia /start per registrarti."
-    );
+    await ctx.reply("⚠️ Profilo non trovato. Invia /start per registrarti.");
     return;
   }
 
@@ -181,9 +183,29 @@ bot.command("status", async (ctx) => {
 bot.command("app", async (ctx) => {
   console.log(`${ctx.from?.id} → /app`);
 
-  await ctx.reply("🌐 Apri la Mini App:", {
-    reply_markup: miniAppKeyboard(),
+  const keyboard = new InlineKeyboard().webApp(
+    "🌐 Apri la Mini App",
+    WEB_APP_URL
+  );
+
+  await ctx.reply("Apri la Mini App del Fronte Meridionale:", {
+    reply_markup: keyboard,
   });
+});
+
+// ---------------------------------------------------------------------------
+// /miniapp fallback
+// ---------------------------------------------------------------------------
+
+bot.command("miniapp", async (ctx) => {
+  console.log(`${ctx.from?.id} → /miniapp`);
+
+  await ctx.reply(
+    "Se il pulsante della Mini App non si apre correttamente dentro Telegram, usa questo collegamento diretto:",
+    {
+      reply_markup: miniAppUrlKeyboard(),
+    }
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -198,6 +220,7 @@ bot.command("help", async (ctx) => {
       `/start — Registrazione e benvenuto\n` +
       `/status — Visualizza il tuo stato\n` +
       `/app — Apri la Mini App\n` +
+      `/miniapp — Apri il collegamento diretto\n` +
       `/help — Mostra questo messaggio`,
     {
       parse_mode: "HTML",
