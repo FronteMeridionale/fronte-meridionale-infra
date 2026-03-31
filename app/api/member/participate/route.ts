@@ -4,11 +4,7 @@ import {
   parseInitDataUser,
 } from "@/app/lib/telegram-validation";
 import { checkRateLimit } from "@/app/lib/rate-limiter";
-import { findByTelegramId, saveMember } from "@/app/lib/member-repository";
-import { calculateMemberStatus } from "@/lib/member/status-engine";
-import { calculateCanVoteFrom } from "@/lib/member/eligibility-engine";
-
-const STEP_EUR = 5;
+import { findByTelegramId } from "@/app/lib/member-repository";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,30 +59,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newTotal = member.total_eur_valid + STEP_EUR;
-    const newStatus = calculateMemberStatus(newTotal);
-
-    const electorSince =
-      newStatus === "elector" && member.status !== "elector"
-        ? new Date().toISOString()
-        : member.elector_since;
-
-    const updated = {
-      ...member,
-      total_eur_valid: newTotal,
-      status: newStatus,
-      elector_since: electorSince,
-      can_vote_from: calculateCanVoteFrom(electorSince),
-    };
-
-    saveMember(updated);
-
     console.log(
-      `[Participate] User ${telegram_user_id}: +${STEP_EUR}€ → Total ${newTotal}€ | Status: ${newStatus}`
+      `[Participate] User ${telegram_user_id}: richiesta ricevuta, nessun accredito automatico eseguito`
     );
 
-    return NextResponse.json(updated);
-  } catch {
+    return NextResponse.json(
+      {
+        ...member,
+        info: "La partecipazione reale richiede una transazione verificata verso la tesoreria. Nessun accredito automatico è stato eseguito.",
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[Participate] errore:", error);
     return NextResponse.json(
       { error: "Errore interno del server" },
       { status: 500 }
