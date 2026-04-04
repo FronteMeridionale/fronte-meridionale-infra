@@ -10,7 +10,7 @@ import { Member } from "@/types/member";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { telegram_user_id } = body;
+    const { telegram_user_id } = body as { telegram_user_id?: unknown };
 
     if (!telegram_user_id || typeof telegram_user_id !== "string") {
       return NextResponse.json(
@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = findByTelegramId(telegram_user_id);
+    const existing = await findByTelegramId(telegram_user_id);
+
     if (existing) {
       return NextResponse.json({
         member_code: existing.member_code,
@@ -39,13 +40,14 @@ export async function POST(request: NextRequest) {
       last_tx_hash: null,
     };
 
-    saveMember(newMember);
+    await saveMember(newMember);
 
     return NextResponse.json(
       { member_code: newMember.member_code, status: newMember.status },
       { status: 201 }
     );
-  } catch {
+  } catch (error) {
+    console.error("[member/create] errore:", error);
     return NextResponse.json(
       { error: "Errore interno del server" },
       { status: 500 }
