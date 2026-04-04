@@ -1,46 +1,41 @@
+import { createClient } from "@supabase/supabase-js";
 import { Member } from "@/types/member";
 
-/**
- * Store in-memory dei membri.
- * In produzione questo verrà sostituito da un database persistente.
- */
-const membersStore = new Map<string, Member>();
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-/**
- * Genera un codice membro univoco, verificando l'assenza di collisioni nello store.
- */
 export function generateMemberCode(): string {
-  let code: string;
-  do {
-    const random = Math.random().toString(36).slice(2, 9).toUpperCase();
-    code = `FM-${Date.now()}-${random}`;
-  } while (membersStore.has(code));
-  return code;
+  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `FM-${Date.now()}-${random}`;
 }
 
-/**
- * Trova un membro per telegram_user_id.
- */
-export function findByTelegramId(telegram_user_id: string): Member | undefined {
-  for (const member of membersStore.values()) {
-    if (member.telegram_user_id === telegram_user_id) {
-      return member;
-    }
-  }
-  return undefined;
+export async function findByTelegramId(
+  telegram_user_id: string
+): Promise<Member | undefined> {
+  const { data } = await supabase
+    .from("members")
+    .select("*")
+    .eq("telegram_user_id", telegram_user_id)
+    .single();
+
+  return data ?? undefined;
 }
 
-/**
- * Trova un membro per member_code.
- */
-export function findByMemberCode(member_code: string): Member | undefined {
-  return membersStore.get(member_code);
+export async function findByMemberCode(
+  member_code: string
+): Promise<Member | undefined> {
+  const { data } = await supabase
+    .from("members")
+    .select("*")
+    .eq("member_code", member_code)
+    .single();
+
+  return data ?? undefined;
 }
 
-/**
- * Salva o aggiorna un membro nello store.
- */
-export function saveMember(member: Member): Member {
-  membersStore.set(member.member_code, member);
+export async function saveMember(member: Member): Promise<Member> {
+  await supabase.from("members").upsert(member);
   return member;
 }
