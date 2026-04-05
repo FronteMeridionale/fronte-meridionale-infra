@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const member = findByTelegramId(telegram_user_id);
+    const member = await findByTelegramId(telegram_user_id);
+
     if (!member) {
       return NextResponse.json(
         { error: "Membro non trovato. Avvia prima il bot." },
@@ -65,7 +66,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        ...member,
+        member_code: member.member_code,
+        status: member.status,
+        total_eur_valid: member.total_eur_valid,
+        elector_since: member.elector_since,
         info: "La partecipazione reale richiede una transazione verificata verso la tesoreria. Nessun accredito automatico è stato eseguito.",
       },
       { status: 200 }
