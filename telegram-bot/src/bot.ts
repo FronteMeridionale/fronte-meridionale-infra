@@ -50,6 +50,8 @@ async function getOrCreateMember(
   telegramUserId: string
 ): Promise<MemberResponse | null> {
   try {
+    console.log(`[Create] chiamata API per user ${telegramUserId}`);
+
     const res = await fetch(`${BACKEND_URL}/api/member/create`, {
       method: "POST",
       headers: {
@@ -61,11 +63,16 @@ async function getOrCreateMember(
     });
 
     if (!res.ok) {
-      console.error(`[Create] HTTP ${res.status}`);
+      const errorText = await res.text();
+      console.error(`[Create] HTTP ${res.status} - ${errorText}`);
       return null;
     }
 
-    return (await res.json()) as MemberResponse;
+    const data = (await res.json()) as MemberResponse;
+
+    console.log("[Create] risposta:", data);
+
+    return data;
   } catch (err) {
     console.error("[Create] fetch error:", err);
     return null;
@@ -81,7 +88,8 @@ async function getMemberStatus(
     );
 
     if (!res.ok) {
-      console.error(`[Status] HTTP ${res.status}`);
+      const errorText = await res.text();
+      console.error(`[Status] HTTP ${res.status} - ${errorText}`);
       return null;
     }
 
@@ -131,7 +139,7 @@ bot.command("start", async (ctx) => {
 
   if (!member) {
     await ctx.reply(
-      "⚠️ Si è verificato un errore durante la registrazione. Riprova tra qualche istante."
+      "⚠️ Si è verificato un errore durante la registrazione.\nRiprova tra qualche istante."
     );
     return;
   }
