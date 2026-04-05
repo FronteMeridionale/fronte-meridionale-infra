@@ -50,9 +50,15 @@ async function getOrCreateMember(
   telegramUserId: string
 ): Promise<MemberResponse | null> {
   try {
+    const url = `${BACKEND_URL}/api/member/create`;
+
+    console.log("[Create] URL:", url);
+    console.log("[Create] payload:", {
+      telegram_user_id: telegramUserId,
+    });
     console.log(`[Create] chiamata API per user ${telegramUserId}`);
 
-    const res = await fetch(`${BACKEND_URL}/api/member/create`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,6 +67,11 @@ async function getOrCreateMember(
         telegram_user_id: telegramUserId,
       }),
     });
+
+    console.log("[Create] status:", res.status);
+    console.log("[Create] retry-after:", res.headers.get("retry-after"));
+    console.log("[Create] content-type:", res.headers.get("content-type"));
+    console.log("[Create] server:", res.headers.get("server"));
 
     if (!res.ok) {
       const errorText = await res.text();
