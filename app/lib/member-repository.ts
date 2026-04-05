@@ -1,5 +1,18 @@
+import { createClient } from "@supabase/supabase-js";
 import { Member, MemberStatus } from "@/types/member";
-import { getDb } from "./db";
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error("SUPABASE_URL non configurato");
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY non configurato");
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 type MemberRow = {
   telegram_user_id: string;
@@ -18,7 +31,7 @@ function rowToMember(row: MemberRow): Member {
     telegram_user_id: row.telegram_user_id,
     member_code: row.member_code,
     status: row.status as MemberStatus,
-    total_eur_valid: row.total_eur_valid,
+    total_eur_valid: Number(row.total_eur_valid),
     elector_since: row.elector_since,
     can_vote_from: row.can_vote_from,
     wallet_address: row.wallet_address,
@@ -36,45 +49,65 @@ export function generateMemberCode(telegram_user_id: string): string {
   return `FM-${numeric.padStart(9, "0")}`;
 }
 
-export function findByTelegramId(telegram_user_id: string): Member | undefined {
-  const row = getDb()
-    .prepare("SELECT * FROM members WHERE telegram_user_id = ?")
-    .get(telegram_user_id) as MemberRow | undefined;
-  return row ? rowToMember(row) : undefined;
+export async function findByTelegramId(
+  telegram_user_id: string
+): Promise<Member | undefined> {
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("telegram_user_id", telegram_user_id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[member-repository] findByTelegramId error:", error);
+    throw error;
+  }
+
+  return data ? rowToMember(data as MemberRow) : undefined;
 }
 
-export function findByMemberCode(member_code: string): Member | undefined {
-  const row = getDb()
-    .prepare("SELECT * FROM members WHERE member_code = ?")
-    .get(member_code) as MemberRow | undefined;
-  return row ? rowToMember(row) : undefined;
+export async function findByMemberCode(
+  member_code: string
+): Promise<Member | undefined> {
+  const { data, error } = await supabase
+    .from("members")
+    .select("*")
+    .eq("member_code", member_code)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[member-repository] findByMemberCode error:", error);
+    throw error;
+  }
+
+  return data ? rowToMember(data as MemberRow) : undefined;
 }
 
 /**
  * Inserts or fully replaces a member record.
  */
-export function saveMember(member: Member): Member {
-  getDb()
-    .prepare(
-      `INSERT INTO members
-         (telegram_user_id, member_code, status, total_eur_valid,
-          elector_since, can_vote_from, wallet_address,
-          first_valid_tx_hash, last_tx_hash)
-       VALUES
-         (@telegram_user_id, @member_code, @status, @total_eur_valid,
-          @elector_since, @can_vote_from, @wallet_address,
-          @first_valid_tx_hash, @last_tx_hash)
-       ON CONFLICT(telegram_user_id) DO UPDATE SET
-         member_code         = excluded.member_code,
-         status              = excluded.status,
-         total_eur_valid     = excluded.total_eur_valid,
-         elector_since       = excluded.elector_since,
-         can_vote_from       = excluded.can_vote_from,
-         wallet_address      = excluded.wallet_address,
-         first_valid_tx_hash = excluded.first_valid_tx_hash,
-         last_tx_hash        = excluded.last_tx_hash,
-         updated_at          = datetime('now')`
-    )
-    .run(member);
+export async function saveMember(member: Member): Promise<Member> {
+  const payload = {
+    telegram_user_id: member.telegram_user_id,
+    member_code: member.member_code,
+    status: member.status,
+    total_eur_valid: member.total_eur_valid,
+    elector_since: member.elector_since,
+    can_vote_from: member.can_vote_from,
+    wallet_address: member.wallet_address,
+    first_valid_tx_hash: member.first_valid_tx_hash,
+    last_tx_hash: member.last_tx_hash,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("members")
+    .upsert(payload, { onConflict: "telegram_user_id" });
+
+  if (error) {
+    console.error("[member-repository] saveMember error:", error);
+    throw error;
+  }
+
   return member;
 }
