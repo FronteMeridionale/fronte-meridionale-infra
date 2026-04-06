@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface TelegramWebAppUser {
   id: number;
@@ -53,7 +53,7 @@ async function copyToClipboard(text: string): Promise<void> {
   } else {
     const el = document.createElement("textarea");
     el.value = text;
-    el.setAttribute("aria-label", "Testo copiato negli appunti");
+    el.setAttribute("aria-hidden", "true");
     el.style.position = "fixed";
     el.style.opacity = "0";
     document.body.appendChild(el);
@@ -75,11 +75,11 @@ export default function MiniApp() {
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [copiedMemo, setCopiedMemo] = useState(false);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     setShowModal(false);
     setVerifyMessage(null);
     setError(null);
-  }
+  }, []);
 
   useEffect(() => {
     if (!showModal) return;
@@ -88,7 +88,7 @@ export default function MiniApp() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showModal]);
+  }, [showModal, closeModal]);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
