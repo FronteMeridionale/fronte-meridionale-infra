@@ -43,15 +43,36 @@ const STATUS_LABELS: Record<MemberStatus, string> = {
   elector: "🟢 Elettore",
 };
 
+const TREASURY_WALLET = "UQBbSnuUUKB4gKwKAdFJd8JglUoY40dfLCWFr4kr0geOGKm5";
+const MIN_USDT = 15;
+const BUY_USDT_URL = "https://www.bybit.com/en/trade/spot/USDT/TON";
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+  } else {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+  }
+}
+
 export default function MiniApp() {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
-  const [participating, setParticipating] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
   const [isTelegramContext, setIsTelegramContext] = useState(false);
+  const [copiedWallet, setCopiedWallet] = useState(false);
+  const [copiedMemo, setCopiedMemo] = useState(false);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -103,6 +124,27 @@ export default function MiniApp() {
     );
     setLoading(false);
   }, []);
+
+  async function handleCopyWallet() {
+    try {
+      await copyToClipboard(TREASURY_WALLET);
+      setCopiedWallet(true);
+      setTimeout(() => setCopiedWallet(false), 2000);
+    } catch {
+      // nessuna azione necessaria
+    }
+  }
+
+  async function handleCopyMemo() {
+    if (!member?.member_code) return;
+    try {
+      await copyToClipboard(member.member_code);
+      setCopiedMemo(true);
+      setTimeout(() => setCopiedMemo(false), 2000);
+    } catch {
+      // nessuna azione necessaria
+    }
+  }
 
   async function handleVerifyTransaction() {
     if (!initData || verifying) return;
@@ -159,56 +201,13 @@ export default function MiniApp() {
             : prev
         );
         setVerifyMessage(null);
+        setShowModal(false);
       }
     } catch (err) {
       console.error("[MiniApp] verify-transaction error:", err);
       setError("Errore di rete. Riprova.");
     } finally {
       setVerifying(false);
-    }
-  }
-
-  async function handleParticipate() {
-    if (!initData || participating) return;
-
-    setParticipating(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/member/participate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ initData }),
-      });
-
-      if (res.status === 429) {
-        setError("Troppe richieste. Attendi un momento.");
-        return;
-      }
-
-      if (!res.ok) {
-        let message = "Errore nella richiesta.";
-
-        try {
-          const body = (await res.json()) as { error?: string };
-          message = body.error ?? message;
-        } catch {
-          // nessuna azione necessaria
-        }
-
-        setError(message);
-        return;
-      }
-
-      const updated = (await res.json()) as Member;
-      setMember(updated);
-    } catch (err) {
-      console.error("[MiniApp] participate error:", err);
-      setError("Errore di rete. Riprova.");
-    } finally {
-      setParticipating(false);
     }
   }
 
@@ -285,26 +284,144 @@ export default function MiniApp() {
 
         {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
-        {verifyMessage && (
-          <p className="text-center text-sm text-amber-600">{verifyMessage}</p>
+        {member?.status === "none" && (
+          <button
+            onClick={() => {
+              setShowModal(true);
+              setVerifyMessage(null);
+              setError(null);
+            }}
+            className="w-full rounded-full bg-green-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300"
+          >
+            💚 Diventa sostenitore
+          </button>
         )}
-
-        <button
-          onClick={handleVerifyTransaction}
-          disabled={verifying || !initData}
-          className="w-full rounded-full bg-blue-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50"
-        >
-          {verifying ? "Verifica in corso…" : "Ho inviato la transazione"}
-        </button>
-
-        <button
-          onClick={handleParticipate}
-          disabled={participating || !initData}
-          className="w-full rounded-full bg-green-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-50"
-        >
-          {participating ? "Elaborazione…" : "Conferma partecipazione (+5€)"}
-        </button>
       </div>
+
+      {/* Modal */}
+      {showModal && member && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
+          <div className="w-full max-w-md rounded-t-3xl bg-white px-6 pb-10 pt-6 shadow-xl sm:rounded-3xl">
+            {/* Header */}
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                💚 Diventa sostenitore
+              </h2>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setVerifyMessage(null);
+                  setError(null);
+                }}
+                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:outline-none"
+                aria-label="Chiudi"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Step 1 */}
+            <div className="mb-4 rounded-xl bg-blue-50 p-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">
+                Passo 1 — Importo minimo
+              </p>
+              <p className="text-base font-bold text-gray-900">
+                {MIN_USDT} USDT sulla rete TON
+              </p>
+              <a
+                href={BUY_USDT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                🛒 Compra USDT
+              </a>
+            </div>
+
+            {/* Step 2 */}
+            <div className="mb-4 rounded-xl bg-gray-50 p-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Passo 2 — Wallet tesoreria
+              </p>
+              <p className="break-all font-mono text-sm text-gray-800">
+                {TREASURY_WALLET}
+              </p>
+              <button
+                onClick={handleCopyWallet}
+                className="mt-2 rounded-full bg-gray-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              >
+                {copiedWallet ? "✅ Copiato!" : "📋 Copia wallet"}
+              </button>
+            </div>
+
+            {/* Step 3 */}
+            <div className="mb-5 rounded-xl bg-gray-50 p-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Passo 3 — Memo da inserire
+              </p>
+              <p className="font-mono text-sm font-bold text-gray-800">
+                {member.member_code}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Inserisci questo codice nel campo <em>memo</em> / <em>comment</em> della transazione.
+              </p>
+              <button
+                onClick={handleCopyMemo}
+                className="mt-2 rounded-full bg-gray-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              >
+                {copiedMemo ? "✅ Copiato!" : "📋 Copia memo"}
+              </button>
+            </div>
+
+            {/* Feedback messages */}
+            {verifyMessage && (
+              <div className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-700">
+                ⚠️ {verifyMessage}
+              </div>
+            )}
+            {error && (
+              <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                ❌ {error}
+              </div>
+            )}
+
+            {/* Verify button */}
+            <button
+              onClick={handleVerifyTransaction}
+              disabled={verifying || !initData}
+              className="w-full rounded-full bg-blue-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50"
+            >
+              {verifying ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg
+                    className="h-5 w-5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  Verifica in corso…
+                </span>
+              ) : (
+                "✅ Ho inviato la transazione"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
