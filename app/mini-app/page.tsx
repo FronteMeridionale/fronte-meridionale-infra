@@ -53,6 +53,7 @@ async function copyToClipboard(text: string): Promise<void> {
   } else {
     const el = document.createElement("textarea");
     el.value = text;
+    el.setAttribute("aria-label", "Testo copiato negli appunti");
     el.style.position = "fixed";
     el.style.opacity = "0";
     document.body.appendChild(el);
@@ -73,6 +74,21 @@ export default function MiniApp() {
   const [isTelegramContext, setIsTelegramContext] = useState(false);
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [copiedMemo, setCopiedMemo] = useState(false);
+
+  function closeModal() {
+    setShowModal(false);
+    setVerifyMessage(null);
+    setError(null);
+  }
+
+  useEffect(() => {
+    if (!showModal) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closeModal();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showModal]);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -286,11 +302,7 @@ export default function MiniApp() {
 
         {member?.status === "none" && (
           <button
-            onClick={() => {
-              setShowModal(true);
-              setVerifyMessage(null);
-              setError(null);
-            }}
+            onClick={() => setShowModal(true)}
             className="w-full rounded-full bg-green-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300"
           >
             💚 Diventa sostenitore
@@ -300,19 +312,20 @@ export default function MiniApp() {
 
       {/* Modal */}
       {showModal && member && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+        >
           <div className="w-full max-w-md rounded-t-3xl bg-white px-6 pb-10 pt-6 shadow-xl sm:rounded-3xl">
             {/* Header */}
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 id="modal-title" className="text-xl font-bold text-gray-900">
                 💚 Diventa sostenitore
               </h2>
               <button
-                onClick={() => {
-                  setShowModal(false);
-                  setVerifyMessage(null);
-                  setError(null);
-                }}
+                onClick={closeModal}
                 className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus:outline-none"
                 aria-label="Chiudi"
               >
