@@ -47,6 +47,8 @@ export default function MiniApp() {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
   const [participating, setParticipating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | null>(null);
   const [isTelegramContext, setIsTelegramContext] = useState(false);
@@ -101,6 +103,70 @@ export default function MiniApp() {
     );
     setLoading(false);
   }, []);
+
+  async function handleVerifyTransaction() {
+    if (!initData || verifying) return;
+
+    setVerifying(true);
+    setVerifyMessage(null);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/member/verify-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ initData }),
+      });
+
+      if (res.status === 429) {
+        setError("Troppe richieste. Attendi un momento.");
+        return;
+      }
+
+      if (!res.ok) {
+        let message = "Errore nella verifica.";
+        try {
+          const body = (await res.json()) as { error?: string };
+          message = body.error ?? message;
+        } catch {
+          // nessuna azione necessaria
+        }
+        setError(message);
+        return;
+      }
+
+      const result = (await res.json()) as {
+        status: "supporter" | "elector" | "pending";
+        total_valid?: number;
+        message?: string;
+      };
+
+      if (result.status === "pending") {
+        setVerifyMessage(
+          result.message ??
+            "Transazione non trovata. Assicurati di aver inviato almeno 15 USDT con il tuo codice membro nel campo memo."
+        );
+      } else {
+        setMember((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: result.status as "supporter" | "elector",
+                total_eur_valid: result.total_valid ?? prev.total_eur_valid,
+              }
+            : prev
+        );
+        setVerifyMessage(null);
+      }
+    } catch (err) {
+      console.error("[MiniApp] verify-transaction error:", err);
+      setError("Errore di rete. Riprova.");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   async function handleParticipate() {
     if (!initData || participating) return;
@@ -218,6 +284,18 @@ export default function MiniApp() {
         )}
 
         {error && <p className="text-center text-sm text-red-600">{error}</p>}
+
+        {verifyMessage && (
+          <p className="text-center text-sm text-amber-600">{verifyMessage}</p>
+        )}
+
+        <button
+          onClick={handleVerifyTransaction}
+          disabled={verifying || !initData}
+          className="w-full rounded-full bg-blue-700 px-10 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50"
+        >
+          {verifying ? "Verifica in corso…" : "Ho inviato la transazione"}
+        </button>
 
         <button
           onClick={handleParticipate}
