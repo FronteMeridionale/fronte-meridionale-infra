@@ -18,6 +18,7 @@ interface TelegramWebApp {
   ready: () => void;
   close: () => void;
   expand: () => void;
+  openLink: (url: string) => void;
 }
 
 declare global {
@@ -45,7 +46,7 @@ const STATUS_LABELS: Record<MemberStatus, string> = {
 
 const TREASURY_WALLET = "UQBbSnuUUKB4gKwKAdFJd8JglUoY40dfLCWFr4kr0geOGKm5";
 const MIN_USDT = 15;
-const BUY_USDT_URL = "https://www.bybit.com/en/trade/spot/USDT/TON";
+const TELEGRAM_WALLET_URL = "https://t.me/wallet";
 
 async function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -341,14 +342,18 @@ export default function MiniApp() {
               <p className="text-base font-bold text-gray-900">
                 {MIN_USDT} USDT sulla rete TON
               </p>
-              <a
-                href={BUY_USDT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              <p className="mt-1 text-xs text-gray-600">
+                Se non possiedi USDT, acquistali nel Wallet Telegram.
+              </p>
+              <button
+                onClick={() =>
+                  window.Telegram?.WebApp?.openLink(TELEGRAM_WALLET_URL)
+                }
+                aria-label="Apri Wallet Telegram per acquistare USDT"
+                className="mt-2 inline-block rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                🛒 Compra USDT
-              </a>
+                💎 Apri Wallet Telegram
+              </button>
             </div>
 
             {/* Step 2 */}
